@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/hexajohnny/duviz/main/install.sh | 
 
 ```
 cargo build --release
-./target/release/duviz
+sudo ./target/release/duviz
 ```
 
 License: MIT OR Apache-2.0
