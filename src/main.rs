@@ -254,8 +254,14 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, start_path: PathBu
     app.update_fs_cache();
     terminal.draw(|f| ui(f, &mut app))?;
 
+    let mut last_frame = Instant::now();
     loop {
         let mut dirty = app.update_scan();
+
+        if app.scan_state.scanning && last_frame.elapsed() >= Duration::from_millis(200) {
+            app.spinner = (app.spinner + 1) % 4;
+            dirty = true;
+        }
 
         if event::poll(Duration::from_millis(200))? {
             dirty = true;
@@ -368,6 +374,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, start_path: PathBu
         if dirty {
             app.update_fs_cache();
             terminal.draw(|f| ui(f, &mut app))?;
+            last_frame = Instant::now();
         }
     }
 
@@ -545,16 +552,22 @@ fn draw_block(f: &mut ratatui::Frame, app: &App, block: &BlockRect) {
 }
 
 fn render_bottom(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
-    let bar_width = if area.width >= 20 { 20 } else { 0 };
     let device_label = app.fs_device.as_deref().unwrap_or("-");
     let version_label = VERSION_LABEL;
-    let min_info = bar_width + version_label.len() + 2;
-    let info_width = if bar_width > 0 && (area.width as usize) > min_info {
-        let max_device = (area.width as usize).saturating_sub(min_info);
-        let device_w = device_label.len().min(max_device);
-        device_w + bar_width + version_label.len()
+    let desired_bar = 20usize;
+    let min_bar = 10usize;
+    let device_w = device_label.len();
+    let version_w = version_label.len();
+    let total_w = area.width as usize;
+
+    let info_width = if total_w >= device_w + desired_bar + version_w {
+        device_w + desired_bar + version_w
+    } else if total_w >= device_w + min_bar + version_w {
+        total_w
+    } else if total_w >= version_w + min_bar {
+        total_w
     } else {
-        bar_width
+        total_w
     };
     let chunks: Vec<Rect> = if info_width > 0 {
         Layout::default()
@@ -761,14 +774,29 @@ fn render_usage_bar(
     }
     let pct = ((used as f64 / total as f64) * 100.0).round() as u64;
     let total_w = area.width as usize;
-    let bar_w = 20usize.min(total_w.saturating_sub(2));
     let version_w = version_label.len();
-    let min_info = bar_w + version_w + 2;
-    let device_w = if total_w > min_info {
-        device_label.len().min(total_w - min_info)
+    let desired_bar = 20usize;
+    let min_bar = 10usize;
+    let desired_device = device_label.len();
+
+    let mut bar_w = desired_bar.min(total_w.saturating_sub(2));
+    let device_w;
+
+    if total_w >= desired_device + bar_w + version_w {
+        device_w = desired_device;
+    } else if total_w >= desired_device + min_bar + version_w {
+        bar_w = total_w - desired_device - version_w;
+        device_w = desired_device;
     } else {
-        0
-    };
+        let remaining = total_w.saturating_sub(version_w);
+        if remaining >= min_bar {
+            bar_w = remaining.min(bar_w);
+            device_w = remaining.saturating_sub(bar_w);
+        } else {
+            bar_w = remaining;
+            device_w = 0;
+        }
+    }
 
     let mut chunks = Vec::new();
     if device_w > 0 {
