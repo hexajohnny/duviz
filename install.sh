@@ -22,6 +22,28 @@ if [ -z "${asset_url}" ]; then
   exit 1
 fi
 
+pick_install_dir() {
+  printf "%s" "$PATH" | tr ':' '\n' | while read -r dir; do
+    [ -z "$dir" ] && continue
+    [ -d "$dir" ] || continue
+    case "$dir" in
+      "$HOME"/*|"$HOME")
+        continue
+        ;;
+    esac
+    if [ -w "$dir" ] || [ "$(id -u)" -eq 0 ]; then
+      printf "%s" "$dir"
+      return
+    fi
+  done
+}
+
+install_dir=$(pick_install_dir)
+if [ -z "${install_dir}" ]; then
+  echo "No writable directory found on PATH for install" >&2
+  exit 1
+fi
+
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -33,10 +55,10 @@ if [ ! -f "$tmp_dir/duviz" ]; then
   exit 1
 fi
 
-if [ "$(id -u)" -ne 0 ]; then
-  sudo install -m 0755 "$tmp_dir/duviz" /usr/local/bin/duviz
+if [ "$(id -u)" -ne 0 ] && [ ! -w "$install_dir" ]; then
+  sudo install -m 0755 "$tmp_dir/duviz" "$install_dir/duviz"
 else
-  install -m 0755 "$tmp_dir/duviz" /usr/local/bin/duviz
+  install -m 0755 "$tmp_dir/duviz" "$install_dir/duviz"
 fi
 
-echo "Installed /usr/local/bin/duviz"
+echo "Installed $install_dir/duviz"
