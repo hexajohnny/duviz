@@ -1,7 +1,3 @@
-'''
-curl -fsSL https://raw.githubusercontent.com/hexajohnny/duviz/main/install.sh | sh
-'''
-
 # duviz
 
 ![Duviz screenshot](misc/example.png)
@@ -34,10 +30,10 @@ Duviz looks at the folder you open it in and adds up the sizes of the things ins
 
 ## Install (Linux x86_64)
 
-This installs the latest release to `/usr/local/bin/duviz`:
+This installs the latest release to `/usr/local/bin/duviz` (run with sudo):
 
 ```
-curl -fsSL https://raw.githubusercontent.com/hexajohnny/duviz/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hexajohnny/duviz/main/install.sh | sudo sh
 ```
 
 ## Build From Source
